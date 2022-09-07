@@ -1,39 +1,39 @@
 // importing required packages and modules
 const { logInfo, logError } = require(`../../dependencies/helpers/console.helpers`);
 
-// importing required config params
-const { HTTP_STATUS_CODES: { UNAUTHORIZED, FORBIDDEN, SERVER_ERROR } } = require(`../../dependencies/config`);
-
-// importing required system permissions map
-const { systemPermissionsMap } = require(`../../dependencies/system-permissions.map`);
+// importing response status codes
+const { SUCCESS, CREATED, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, SERVER_ERROR } = require(`../../dependencies/config`).HTTP_STATUS_CODES;
 
 
 
-// this middleware grants or rejects authorization to incoming request
-// for a resource on the basis of assigned system permissions in its
-// access token
-const authorizeRequest = async (req, res, next) => {
+// this function will be added as a middleware to check for the JSON web token
+// and authenticate users
+const grantAccessTo = (inputArrayOfRoles) => {
 
-  try {
+  // creating a method which grants access based on the requestee's system role
+  const accessGranter = (req, res, next) => {
 
-    // fetching required data from incoming request
-    const { method, originalUrl, tokenData: { bearerPermissions, accountStatus } } = req;
+    // fetching required data from incoming token data
+    const { bearerPermissions, accountStatus, _franchise } = req.tokenData;
 
-    // checking accountStatus for token bearer
+    // fetching required data from request headers
+    const franchiseId = req.headers.franchiseId;
+
+    // checking if the token bearer's account is active
     if (accountStatus.toUpperCase() === `DISABLED`) {
-      // this code runs in case the bearer's account is DISABLED
+      // this code runs in case the user's account status is not disabled
 
       // logging error message to the console
-      logError(`Authorization failed. Bearer's account disabled by System Admin.`);
+      logError(`Authorization failed. Your account is disabled. Contact system admin.`);
 
       // returning the response with an error message
       return res.status(FORBIDDEN).json({
 
         hasError: true,
-        message: `ERROR: Requested Operation Failed.`,
+        message: `ERROR: Requested operation failed.`,
         error: {
 
-          error: `Authorization failed. Bearer's account disabled by System Admin.`
+          error: `ERROR: Authorization failed. Your account is disabled. Contact system admin`
 
         }
 
@@ -41,56 +41,21 @@ const authorizeRequest = async (req, res, next) => {
 
     }
 
-    // parsing the original request url as required to fetch permission mapping
-    const urlFragments = originalUrl.split(`/`)
-
-    const parsedUrlFragments = [];
-
-    for (const fragment of urlFragments) {
-
-      // calling helper to validate current entry
-      const { status, data, error } = await isValidObjectId(fragment);
-
-      // checking for an error
-      if (error) {
-        // this code runs in case an error was returned from helper
-
-        // throwing an exception
-        throw (`An unhandled exception occured while parsing request url.`);
-
-      }
-
-      const result = data ? `*` : fragment;
-
-      // returning result
-      parsedUrlFragments.push(result);
-
-    }
-
-    const parsedUrl = parsedUrlFragments.join(`/`);
-
-    // fetching required system permissions for the requested system resource
-    const requiredSystemPermissions = systemPermissionsMap.get(`${method.toUpperCase()} ${parsedUrl}`);
-
-    // checking if bearer has required system permissions to proceed
-    const isBearerAuthorized = requiredSystemPermissions.some(permission => bearerPermissions.includes(permission));
-
-    // checking if the bearer is authorized or not
-    if (!isBearerAuthorized) {
-      // this code runs in case bearer is not authorized to access
-      // the requested resource
+    // validating incoming systems roles
+    if (!inputArrayOfRoles || !Array.isArray(inputArrayOfRoles)) {
+      // this code runs in case incoming field has invalid data
 
       // logging error message to the console
-      logError(`Access Denied. Bearer not authorized to access this resource.`);
+      logError(`ERROR @ grantAccessTo -> grant.access.middleware.js.`);
 
       // returning the response with an error message
-      return res.status(FORBIDDEN).json({
+      return res.status(SERVER_ERROR).json({
 
         hasError: true,
-        message: `ERROR: Requested Operation Failed.`,
+        message: `ERROR: Requested operation failed.`,
         error: {
 
-          error: `Access Denied. Bearer not authorized to access this resource.`
+          error: `ERROR: Invalid value for 'inputArrayOfRoles'.`
 
         }
 
@@ -98,29 +63,47 @@ const authorizeRequest = async (req, res, next) => {
 
     }
 
-    // forwarding request to the next handler
-    next();
+    // checking if the user is superAdmin OR masterAgent
+    const isSuperUser = (bearerPermissions.includes(`super-admin:*`) || bearerPermissions.includes(`admin:master-franchise`)) ? true : false;
 
-  } catch (error) {
-    // this code runs in case of an ERROR @ runtime
+    // checking if the franchise of required data is match with the user's franchise
+    const isFranchiseSame = (_franchise._id === franchiseId) ? true : false;
 
-    // logging error messages to the console
-    logError(`ERROR @ authorizeRequest -> authorization.middleware.js`, error);
+    // checking if the user's system permissions matches any of the allowed permissions
+    const hasPermission = inputArrayOfRoles.some(entry => bearerPermissions.includes(entry));
 
-    // returning the response with an error message
-    return res.status(SERVER_ERROR).json({
+    // checking if the user is authorized or not
+    if (isSuperUser || (isFranchiseSame && hasPermission)) {
 
-      hasError: true,
-      message: `ERROR: Requested Operation Failed.`,
-      error: {
+      // forwarding the request to the next handler
+      next();
 
-        error
+    } else {
+      // this code runs in case requestee is not authorized to access the
+      // requested resource (endpoint)
 
-      }
+      // logging error message to the console
+      logError(`Authorization failed. You're not authorized to access this resource.`);
 
-    });
+      // returning the response with an error message
+      return res.status(FORBIDDEN).json({
+
+        hasError: true,
+        message: `ERROR: Requested operation failed.`,
+        error: {
+
+          error: `ERROR: Authorization failed. Not authorized to access this resource.`
+
+        }
+
+      });
+
+    }
 
   }
+
+  // returning the function upon invocation by the router
+  return accessGranter;
 
 }
 
@@ -129,6 +112,6 @@ const authorizeRequest = async (req, res, next) => {
 // exporting as a module
 module.exports = {
 
-  authorizeRequest
+  grantAccessTo
 
 };

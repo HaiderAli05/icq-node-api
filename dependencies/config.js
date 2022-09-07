@@ -14,7 +14,7 @@ module.exports = {
 
   APP_MODE,
 
-  NODE_PORT: 3000,
+  NODE_PORT: 3005,
 
   API_BASE_URL: APP_MODE === `DEV` ? `http://localhost:3000` : APP_MODE === `STAGE` ? `https://www.staging.example.com` : `https://www.example.com`,
 
@@ -67,5 +67,11 @@ module.exports = {
   ALLOWED_INCOMING_FILE_TYPES: [`jpg`, `jpeg`, `png`],
 
   JWT_EXPIRY_IN_SECONDS: 2592000, // 30 Days
+
+  CUSTOM_ID_BASE_VALUE: 1000,
+
+  CUSTOM_ID_PREFIX_CHARS: 2,
+
+  USER_ID_PREFIX: `US`,
 
 };

@@ -1,6 +1,7 @@
 // importing required packages and modules
 const cors = require(`cors`);
 const express = require(`express`);
+const http = require('http');
 const morgan = require(`morgan`);
 const { logSuccess, logInfo, logWarning, logError } = require(`./dependencies/helpers/console.helpers`);
 const { connectDatabase, disconnectDatabase } = require(`./dependencies/helpers/database.helpers`);
@@ -9,13 +10,14 @@ const { connectDatabase, disconnectDatabase } = require(`./dependencies/helpers/
 const { APP_MODE, NODE_PORT, MAX_FILE_SIZE_ALLOWED_BYTES, HTTP_STATUS_CODES: { SUCCESS } } = require(`./dependencies/config`);
 
 // importing required routers
-const { systemRoleRouter } = require(`./api/routers/system-role.router`);
-// REMIANING ROUTERS GO HERE
+const { roleRouter } = require(`./api/routers/role.router`);
+const { userRouter } = require(`./api/routers/user.router`);
 
+// creating an instance of express app
+const app = express();
 
-
-// creating an instance of express server
-const server = express();
+// creating an instance of http server and pass it to socketsHandler
+const server = http.createServer(app);
 
 
 
@@ -34,17 +36,17 @@ const server = express();
     // 2-> middleware to log requests to the console
     // 3-> middleware to parse json request body
     // 4-> middleware to parse urlencoded request data
-    server.use(cors());
-    server.use(morgan(`dev`));
-    server.use(express.json({ limit: MAX_FILE_SIZE_ALLOWED_BYTES, verify: (req, res, buf) => req.rawBody = buf }));
-    server.use(express.urlencoded({ extended: false }));
+    app.use(cors());
+    app.use(morgan(`dev`));
+    app.use(express.json({ limit: MAX_FILE_SIZE_ALLOWED_BYTES, verify: (req, res, buf) => req.rawBody = buf }));
+    app.use(express.urlencoded({ extended: false }));
 
     // api handlers
-    server.use(`/api/system-roles`, systemRoleRouter); // validation done
-    // LIST OF API HANDLERS GO HERE
+    app.use(`/api/roles`, roleRouter);
+    app.use(`/api/users`, userRouter);
 
     // creating test route
-    server.get(`/`, (req, res, next) => res.status(SUCCESS).send(`|| Service is UP & RUNNING in ${APP_MODE} mode ||`));
+    app.get(`/`, (req, res, next) => res.status(SUCCESS).send(`|| Service is UP & RUNNING in ${APP_MODE} mode ||`));
 
 
 

@@ -4,17 +4,14 @@ const mongoose = require(`mongoose`);
 
 
 // defining system role schema
-const systemRoleSchema = new mongoose.Schema({
+const roleSchema = new mongoose.Schema({
 
-  _id: {
-    type: mongoose.Schema.Types.ObjectId
-  },
   _creator: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User'
   },
-  name: {
+  title: {
     type: String,
     uppercase: true,
     trim: true,
@@ -28,8 +25,7 @@ const systemRoleSchema = new mongoose.Schema({
     default: null
   },
   permissions: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: `SystemPermission`,
+    type: [String],
     default: []
   },
   isDeleted: {
@@ -39,6 +35,7 @@ const systemRoleSchema = new mongoose.Schema({
 
 }, {
 
+  _id: true,
   timestamps: true
 
 });
@@ -46,4 +43,4 @@ const systemRoleSchema = new mongoose.Schema({
 
 
 // exporting schema model as a module
-module.exports = mongoose.model('SystemRole', systemRoleSchema, `system-roles`);
+module.exports = mongoose.model('Role', roleSchema, `roles`);

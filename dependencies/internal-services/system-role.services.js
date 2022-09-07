@@ -6,7 +6,7 @@ const { logWarning, logError } = require(`../helpers/console.helpers`);
 const { HTTP_STATUS_CODES: { SUCCESS, CREATED, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, SERVER_ERROR } } = require(`../config`);
 
 // requiring required schemas
-const SystemPermission = require(`../../api/models/system-role.model`);
+const SystemPermission = require(`../../api/models/role.model`);
 
 
 
